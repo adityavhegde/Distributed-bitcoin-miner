@@ -1,31 +1,32 @@
 defmodule Chain do
-    def counter(next_pid) do
-        numLeadingZeros =4
+    def counter(parent) do
+        numLeadingZeros = 7
         list = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n',
         'o','p','q','r','s','t','u','v','w','x','y','z','`','1','2','3',
         '4','5','6','7','8','9','0', '-', '=', '[', ']', '\\', ';', '\'',
         ',', '.', '/', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', 
         ')', '_', '+', '{', '}', '|', ':', '\"', '<', '>', '?']
         receive do
-            n ->
-                send next_pid, n + 1
+            {n, myPID} ->
                 GenHash.perm_rep(list,[[]],n, numLeadingZeros-1)
-                #send next_pid, n + 1
+                send parent, {:ok, myPID, n}
         end
     end
     
     def create_processes(n) do
-        last = Enum.reduce 1..n, self(),
-        fn (_,send_to) ->
-            spawn(Chain, :counter, [send_to])
-        end
-    
-        send last, 1 # start the count by sending a 1 to the last process
+        parent= self()
+        Enum.each(1..n, fn(suffix_length)->
+          worker = spawn(Chain, :counter, [parent])
+          send worker, {suffix_length, worker}
+        end)
 
-        receive do # and wait for the result to come back to us
-            final_answer when is_integer(final_answer) ->
-                "Result is #{inspect(final_answer)}"
-        end
+        Enum.each(1..n, fn(_)->
+          receive do
+            {:ok, myPID, n} ->
+              IO.puts "Checked completely for suffix of length #{n}"
+              #IO.inspect myPID
+          end
+        end)
     end
 
     def run(n) do
@@ -52,8 +53,8 @@ defmodule GenHash do
                 hash = header |> stringToHash
                 cond do
                     #output the string and its hash if found with required number of leading zeros
-                    hash |> String.slice(0..leadingZeros) == "0000" ->
-                        IO.puts [header, "    ", hash]
+                    hash |> String.slice(0..leadingZeros) == "0000000" ->
+                    IO.puts [header, "    ", hash]
                     true ->
                         true
                 end
@@ -65,4 +66,4 @@ defmodule GenHash do
     end
 end
 
-Chain.run(200_000)
+Chain.run(100)
