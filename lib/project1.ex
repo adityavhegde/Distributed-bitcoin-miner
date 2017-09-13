@@ -8,26 +8,53 @@ defmodule Chain do
         receive do
             n ->
                 GenHash.perm_rep(list,[[]],n, numLeadingZeros-1, parent)
-                send parent, {:ok, n}
+                send parent, {:ok, :internal, n}
         end
     end
 
     # suffix length will be incremented as each receive executes
     # initial value of suffix length is set in the calling process
-    def receiver(suffix_length, leadingZeros) do
+    def receiver(suffix_length, leadingZeros, nodes_list) do
         parent = self()
+        interval = 4000
+
         receive do
-            {:ok, n} ->
+            {:ok, :client, worker_name, n} ->
+                worker = Node.spawn(worker_name, Chain, :counter, [self(), leadingZeros]) 
+                send worker, suffix_length
+                receiver(suffix_length + 1, leadingZeros, nodes_list)
+
+            {:ok,:internal, n} ->
                 IO.puts "done for suffix length #{n}"
                 worker = spawn(Chain, :counter, [parent, leadingZeros])
-                send worker, suffix_length + 1
-                receiver(suffix_length + 1, leadingZeros)
+                send worker, suffix_length
+                receiver(suffix_length + 1, leadingZeros, nodes_list)
+
+            #TODO: redundant code section
             {header, hashValue} -> 
-                IO.puts [header, "  ", hashValue]
-                receiver(suffix_length, leadingZeros)
+                #IO.puts [header, "  ", hashValue]
+                receiver(suffix_length, leadingZeros, nodes_list)
+        after
+            interval ->
+                cond do
+                    Enum.at(Node.list -- nodes_list, 0) == nil ->
+                        receiver(suffix_length, leadingZeros, nodes_list)
+                    true ->
+                        worker = Node.spawn(Enum.at(Node.list -- nodes_list, 0), Chain, :counter, [self(), leadingZeros])
+                        send worker, suffix_length
+                        receiver(suffix_length + 1, leadingZeros, nodes_list ++ Enum.at(Node.list -- nodes_list, 0))
+                end
+                # discard below
+                #Enum.each(Node.list -- nodes_list, fn(new_node_name) -> 
+                    #TODO: spawn 8 processes here
+                #    worker = Node.spawn(new_node_name, Chain, :counter, [self(), leadingZeros])
+                 #   send worker, suffix_length
+                #end)
+                #temp = Node.list -- nodes_list
+                #receiver(suffix_length + 1, leadingZeros, nodes_list ++ temp)
         end
     end
-    
+
     def create_processes(leadingZeros, num_processes) do
         parent= self()
         Enum.each(1..num_processes, fn(suffix_length)->
@@ -35,13 +62,9 @@ defmodule Chain do
           send worker, suffix_length
         end)
 
-        Chain.receiver(num_processes, leadingZeros)
+        Chain.receiver(num_processes, leadingZeros, [])
     end
 
-    #def run(n) do
-    #    IO.puts inspect :timer.tc(Chain, :create_processes, [n])
-        #Chain.create_processes(n)
-    #end
 end
 
 defmodule GenHash do
@@ -78,9 +101,10 @@ end
 
 defmodule Project1 do
   def main(args) do
-    Node.start String.to_atom("bar@192.168.0.2")
-    Node.set_cookie :monster
-    #IO.inspect{Node.self, Node.get_cookie}
+    Node.start String.to_atom("aditya@192.168.0.12")
+    Node.set_cookie :project1
+    IO.inspect Node.self #, Node.get_cookie
+    
     num_processes = 8
       args 
       |> parse_args 
