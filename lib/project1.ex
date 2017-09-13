@@ -1,11 +1,10 @@
 defmodule Chain do
-    def counter(parent) do
-        numLeadingZeros = 2
+    def counter(parent, numLeadingZeros) do
         list = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n',
         'o','p','q','r','s','t','u','v','w','x','y','z','`','1','2','3',
-        '4','5','6','7','8','9','0', '-', '=', '[', ']', '\\', ';', '\'',
-        ',', '.', '/', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', 
-        ')', '_', '+', '{', '}', '|', ':', '\"', '<', '>', '?']
+        '4','5','6','7','8','9','0']#, '-', '=', '[', ']', '\\', ';', '\'',
+        #',', '.', '/', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', 
+        #')', '_', '+', '{', '}', '|', ':', '\"', '<', '>', '?']
         receive do
             n ->
                 GenHash.perm_rep(list,[[]],n, numLeadingZeros-1, parent)
@@ -15,36 +14,34 @@ defmodule Chain do
 
     # suffix length will be incremented as each receive executes
     # initial value of suffix length is set in the calling process
-    def receiver(suffix_length) do
+    def receiver(suffix_length, leadingZeros) do
         parent = self()
         receive do
             {:ok, n} ->
-                worker = spawn(Chain, :counter, [parent])
+                IO.puts "done for suffix length #{n}"
+                worker = spawn(Chain, :counter, [parent, leadingZeros])
                 send worker, suffix_length + 1
-                receiver(suffix_length + 1)
-
+                receiver(suffix_length + 1, leadingZeros)
             {header, hashValue} -> 
                 IO.puts [header, "  ", hashValue]
-                receiver(suffix_length)
-
+                receiver(suffix_length, leadingZeros)
         end
     end
     
-    def create_processes(n) do
+    def create_processes(leadingZeros, num_processes) do
         parent= self()
-
-        Enum.each(1..n, fn(suffix_length)->
-          worker = spawn(Chain, :counter, [parent])
+        Enum.each(1..num_processes, fn(suffix_length)->
+          worker = spawn(Chain, :counter, [parent, leadingZeros])
           send worker, suffix_length
         end)
 
-        Chain.receiver(n)
+        Chain.receiver(num_processes, leadingZeros)
     end
 
-    def run(n) do
-        IO.puts inspect :timer.tc(Chain, :create_processes, [n])
+    #def run(n) do
+    #    IO.puts inspect :timer.tc(Chain, :create_processes, [n])
         #Chain.create_processes(n)
-    end
+    #end
 end
 
 defmodule GenHash do
@@ -65,7 +62,7 @@ defmodule GenHash do
                 hash = header |> stringToHash
                 cond do
                     #output the string and its hash if found with required number of leading zeros
-                    hash |> String.slice(0..leadingZeros) == "00" ->
+                    hash |> String.slice(0..leadingZeros) == String.duplicate("0", leadingZeros+1) ->
                     #IO.puts [header, "    ", hash]
                     send parent, {header, hash}
                     true ->
@@ -79,4 +76,23 @@ defmodule GenHash do
     end
 end
 
-Chain.run(6)
+defmodule Project1 do
+  def main(args) do
+    Node.start String.to_atom("bar@192.168.0.2")
+    Node.set_cookie :monster
+    #IO.inspect{Node.self, Node.get_cookie}
+    num_processes = 8
+      args 
+      |> parse_args 
+      |> Enum.at(0) 
+      |> Integer.parse(10) 
+      |> elem(0) 
+      |> Chain.create_processes(num_processes)
+  end
+
+  defp parse_args(args) do
+    {_, word, _} = args 
+    |> OptionParser.parse(strict: [limit: :integer])
+    word
+  end
+end

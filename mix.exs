@@ -6,8 +6,9 @@ defmodule Project1.Mixfile do
       app: :project1,
       version: "0.1.0",
       elixir: "~> 1.5",
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
+      escript: [main_module: Project1],
+      #build_embedded: Mix.env == :dev,
+      #start_permanent: Mix.env == :dev,
       deps: deps()
     ]
   end
@@ -22,6 +23,7 @@ defmodule Project1.Mixfile do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      #{:local_dependency, path: "./lib/project1.ex"}
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
     ]
