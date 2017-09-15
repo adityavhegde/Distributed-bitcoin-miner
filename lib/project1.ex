@@ -1,10 +1,8 @@
 defmodule Chain do
     def counter(parent, numLeadingZeros) do
-        list = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n',
-        'o','p','q','r','s','t','u','v','w','x','y','z','`','1','2','3',
-        '4','5','6','7','8','9','0']#, '-', '=', '[', ']', '\\', ';', '\'',
-        #',', '.', '/', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', 
-        #')', '_', '+', '{', '}', '|', ':', '\"', '<', '>', '?']
+        list = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o',
+                'p','q','r','s','t','u','v','w','x','y','z','1','2','3','4',
+                '5','6','7','8','9','0']
         receive do
             n ->
                 GenHash.perm_rep(list,[[]],n, numLeadingZeros-1, parent)
@@ -21,37 +19,27 @@ defmodule Chain do
         receive do
             {:ok, worker_name, n} ->
                 IO.puts "done for suffix length #{n}"
-                worker = Node.spawn(worker_name, Chain, :counter, [self(), leadingZeros]) 
+                worker = Node.spawn(worker_name, Chain, :counter, [parent, leadingZeros]) 
                 send worker, suffix_length
                 receiver(suffix_length + 1, leadingZeros, nodes_list)
-
-            #{:ok, :internal, n} ->
-            #    IO.puts "done for suffix length #{n}"
-            #    worker = Node.spawn(Node.self(), Chain, :counter, [parent, leadingZeros])
-            #    send worker, suffix_length
-            #    receiver(suffix_length + 1, leadingZeros, nodes_list)
         after
+            #check after an interval if a new client has connected
             interval ->
-                #IO.inspect Node.list
-                #IO.inpsect nodes_list
-                #IO.inspect Enum.at(Node.list -- nodes_list, 0)
-                #IO.inspect {"inpsecting nodes", nodes_list ++ [Enum.at(Node.list -- nodes_list, 0)]}
                 cond do
                     Enum.at(Node.list -- nodes_list, 0) == nil ->
-                        #IO.inspect Enum.at(Node.list -- nodes_list, 0)
                         receiver(suffix_length, leadingZeros, nodes_list)
+                    #if found a new client, spawn N initial processes on it
                     true ->
-                        Enum.each(suffix_length..suffix_length+8, fn(suffix_length)->
-                          worker = Node.spawn(Enum.at(Node.list -- nodes_list, 0), Chain, :counter, [self(), leadingZeros])
+                        Enum.each(suffix_length..suffix_length+11, fn(suffix_length)->
+                          worker = Node.list -- nodes_list |> Enum.at(0) |> Node.spawn(Chain, :counter, [self(), leadingZeros])
                           send worker, suffix_length
                         end)
-                        #worker = Node.spawn(Enum.at(Node.list -- nodes_list, 0), Chain, :counter, [self(), leadingZeros])
-                        #send worker, suffix_length
-                        receiver(suffix_length + 9, leadingZeros, nodes_list ++ [Enum.at(Node.list -- nodes_list, 0)])
+                        receiver(suffix_length + 12, leadingZeros, nodes_list ++ [Enum.at(Node.list -- nodes_list, 0)])
                 end
         end
     end
 
+    #spawn initially N processes if this the server
     def create_processes(leadingZeros, num_processes) do
         parent= self()
         Enum.each(1..num_processes, fn(suffix_length)->
@@ -82,9 +70,9 @@ defmodule GenHash do
                 hash = header |> stringToHash
                 cond do
                     #output the string and its hash if found with required number of leading zeros
-                    hash |> String.slice(0..leadingZeros) == String.duplicate("0", leadingZeros+1) ->
+                    hash 
+                    |> String.slice(0..leadingZeros) == String.duplicate("0", leadingZeros+1) ->
                     IO.puts [header, "    ", hash]
-                    #send parent, {header, hash}
                     true ->
                         true
                 end
@@ -98,10 +86,10 @@ end
 
 defmodule Project1 do
   def main(args) do
-    Node.start String.to_atom("rohit@192.168.0.2")
+    Node.start String.to_atom("rohit@10.138.170.3")
     Node.set_cookie :xyzzy
     
-    num_processes = 2
+    num_processes = 12
     cond do
       #check if ip is given
       args
@@ -109,7 +97,8 @@ defmodule Project1 do
       |> Enum.at(0) =~ "." ->
         #IO.puts "found ip"
         server_ip = args |> Enum.at(0)
-        server = "aditya@"<>server_ip
+        #server = "aditya@"<>server_ip
+        server = "rohit@"<>server_ip
         #IO.inspect String.to_atom(server)
         Node.connect String.to_atom(server)
         IO.inspect {"connected nodes", Node.list}
