@@ -8,7 +8,7 @@ defmodule Chain do
         receive do
             n ->
                 GenHash.perm_rep(list,[[]],n, numLeadingZeros-1, parent)
-                send parent, {:ok, :internal, n}
+                send parent, {:ok, Node.self(), n}
         end
     end
 
@@ -19,22 +19,17 @@ defmodule Chain do
         interval = 4000
 
         receive do
-            {:ok, :client, worker_name, n} ->
+            {:ok, worker_name, n} ->
                 IO.puts "done for suffix length #{n}"
                 worker = Node.spawn(worker_name, Chain, :counter, [self(), leadingZeros]) 
                 send worker, suffix_length
                 receiver(suffix_length + 1, leadingZeros, nodes_list)
 
-            {:ok,:internal, n} ->
-                IO.puts "done for suffix length #{n}"
-                worker = spawn(Chain, :counter, [parent, leadingZeros])
-                send worker, suffix_length
-                receiver(suffix_length + 1, leadingZeros, nodes_list)
-
-            #TODO: redundant code section
-            #{header, hashValue} -> 
-                #IO.puts [header, "  ", hashValue]
-            #    receiver(suffix_length, leadingZeros, nodes_list)
+            #{:ok, :internal, n} ->
+            #    IO.puts "done for suffix length #{n}"
+            #    worker = Node.spawn(Node.self(), Chain, :counter, [parent, leadingZeros])
+            #    send worker, suffix_length
+            #    receiver(suffix_length + 1, leadingZeros, nodes_list)
         after
             interval ->
                 #IO.inspect Node.list
@@ -88,8 +83,8 @@ defmodule GenHash do
                 cond do
                     #output the string and its hash if found with required number of leading zeros
                     hash |> String.slice(0..leadingZeros) == String.duplicate("0", leadingZeros+1) ->
-                    #IO.puts [header, "    ", hash]
-                    send parent, {header, hash}
+                    IO.puts [header, "    ", hash]
+                    #send parent, {header, hash}
                     true ->
                         true
                 end
@@ -104,38 +99,33 @@ end
 defmodule Project1 do
   def main(args) do
     Node.start String.to_atom("rohit@192.168.0.2")
-    #Node.start String.to_atom("rohit@10.136.78.85")
     Node.set_cookie :xyzzy
-    Node.connect :"aditya@10.136.27.161"
-    #IO.inspect Node.list
-    #IO.inspect Node.self #, Node.get_cookie
     
-    num_processes = 8
+    num_processes = 2
     cond do
+      #check if ip is given
       args
       |> parse_args
       |> Enum.at(0) =~ "." ->
         #IO.puts "found ip"
         server_ip = args |> Enum.at(0)
-       # Node.connect :["aditya@"|server_ip]
+        server = "aditya@"<>server_ip
+        #IO.inspect String.to_atom(server)
+        Node.connect String.to_atom(server)
+        IO.inspect {"connected nodes", Node.list}
+        receive do
+          {:ok} ->
+            true
+        end
       true ->
-        true
+        #if number of leading zeros is given
+        args 
+        |> parse_args 
+        |> Enum.at(0) 
+        |> Integer.parse(10) 
+        |> elem(0) 
+        |> Chain.create_processes(num_processes)
     end
-
-    args 
-      |> parse_args 
-      |> Enum.at(0) 
-      #|> Integer.parse(10) 
-      #|> elem(0) 
-      #|> String.codepoints
-      |> IO.inspect
-
-      args 
-      |> parse_args 
-      |> Enum.at(0) 
-      |> Integer.parse(10) 
-      |> elem(0) 
-      |> Chain.create_processes(num_processes)
   end
 
   defp parse_args(args) do
