@@ -86,7 +86,7 @@ end
 
 defmodule Project1 do
   def main(args) do
-    Node.start String.to_atom("rohit@10.138.170.3")
+    Node.start String.to_atom("mining@192.168.0.2")
     Node.set_cookie :xyzzy
     
     num_processes = 12
@@ -97,9 +97,7 @@ defmodule Project1 do
       |> Enum.at(0) =~ "." ->
         #IO.puts "found ip"
         server_ip = args |> Enum.at(0)
-        #server = "aditya@"<>server_ip
-        server = "rohit@"<>server_ip
-        #IO.inspect String.to_atom(server)
+        server = "mining@"<>server_ip
         Node.connect String.to_atom(server)
         IO.inspect {"connected nodes", Node.list}
         receive do
