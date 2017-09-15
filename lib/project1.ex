@@ -19,9 +19,18 @@ defmodule Chain do
         receive do
             {:ok, worker_name, n} ->
                 IO.puts "done for suffix length #{n}"
-                worker = Node.spawn(worker_name, Chain, :counter, [parent, leadingZeros]) 
-                send worker, suffix_length
-                receiver(suffix_length + 1, leadingZeros, nodes_list)
+                cond do
+                    Node.self() == worker_name or Enum.member?(Node.list, worker_name) -> 
+                        worker = Node.spawn(worker_name, Chain, :counter, [parent, leadingZeros]) 
+                        send worker, suffix_length
+                        receiver(suffix_length + 1, leadingZeros, nodes_list)
+                    true ->
+                        IO.puts "disconnected #{worker_name}"
+                        receiver(suffix_length, leadingZeros, nodes_list -- [worker_name])
+                end
+                #worker = Node.spawn(worker_name, Chain, :counter, [parent, leadingZeros]) 
+                #send worker, suffix_length
+                #receiver(suffix_length + 1, leadingZeros, nodes_list)
         after
             #check after an interval if a new client has connected
             interval ->
