@@ -20,6 +20,7 @@ defmodule Chain do
 
         receive do
             {:ok, :client, worker_name, n} ->
+                IO.puts "done for suffix length #{n}"
                 worker = Node.spawn(worker_name, Chain, :counter, [self(), leadingZeros]) 
                 send worker, suffix_length
                 receiver(suffix_length + 1, leadingZeros, nodes_list)
@@ -31,27 +32,28 @@ defmodule Chain do
                 receiver(suffix_length + 1, leadingZeros, nodes_list)
 
             #TODO: redundant code section
-            {header, hashValue} -> 
+            #{header, hashValue} -> 
                 #IO.puts [header, "  ", hashValue]
-                receiver(suffix_length, leadingZeros, nodes_list)
+            #    receiver(suffix_length, leadingZeros, nodes_list)
         after
             interval ->
+                #IO.inspect Node.list
+                #IO.inpsect nodes_list
+                #IO.inspect Enum.at(Node.list -- nodes_list, 0)
+                #IO.inspect {"inpsecting nodes", nodes_list ++ [Enum.at(Node.list -- nodes_list, 0)]}
                 cond do
                     Enum.at(Node.list -- nodes_list, 0) == nil ->
+                        #IO.inspect Enum.at(Node.list -- nodes_list, 0)
                         receiver(suffix_length, leadingZeros, nodes_list)
                     true ->
-                        worker = Node.spawn(Enum.at(Node.list -- nodes_list, 0), Chain, :counter, [self(), leadingZeros])
-                        send worker, suffix_length
-                        receiver(suffix_length + 1, leadingZeros, nodes_list ++ Enum.at(Node.list -- nodes_list, 0))
+                        Enum.each(suffix_length..suffix_length+8, fn(suffix_length)->
+                          worker = Node.spawn(Enum.at(Node.list -- nodes_list, 0), Chain, :counter, [self(), leadingZeros])
+                          send worker, suffix_length
+                        end)
+                        #worker = Node.spawn(Enum.at(Node.list -- nodes_list, 0), Chain, :counter, [self(), leadingZeros])
+                        #send worker, suffix_length
+                        receiver(suffix_length + 9, leadingZeros, nodes_list ++ [Enum.at(Node.list -- nodes_list, 0)])
                 end
-                # discard below
-                #Enum.each(Node.list -- nodes_list, fn(new_node_name) -> 
-                    #TODO: spawn 8 processes here
-                #    worker = Node.spawn(new_node_name, Chain, :counter, [self(), leadingZeros])
-                 #   send worker, suffix_length
-                #end)
-                #temp = Node.list -- nodes_list
-                #receiver(suffix_length + 1, leadingZeros, nodes_list ++ temp)
         end
     end
 
@@ -62,7 +64,7 @@ defmodule Chain do
           send worker, suffix_length
         end)
 
-        Chain.receiver(num_processes, leadingZeros, [])
+        Chain.receiver(num_processes+1, leadingZeros, [])
     end
 
 end
@@ -101,11 +103,33 @@ end
 
 defmodule Project1 do
   def main(args) do
-    Node.start String.to_atom("aditya@192.168.0.12")
-    Node.set_cookie :project1
-    IO.inspect Node.self #, Node.get_cookie
+    Node.start String.to_atom("rohit@192.168.0.2")
+    #Node.start String.to_atom("rohit@10.136.78.85")
+    Node.set_cookie :xyzzy
+    Node.connect :"aditya@10.136.27.161"
+    #IO.inspect Node.list
+    #IO.inspect Node.self #, Node.get_cookie
     
     num_processes = 8
+    cond do
+      args
+      |> parse_args
+      |> Enum.at(0) =~ "." ->
+        #IO.puts "found ip"
+        server_ip = args |> Enum.at(0)
+       # Node.connect :["aditya@"|server_ip]
+      true ->
+        true
+    end
+
+    args 
+      |> parse_args 
+      |> Enum.at(0) 
+      #|> Integer.parse(10) 
+      #|> elem(0) 
+      #|> String.codepoints
+      |> IO.inspect
+
       args 
       |> parse_args 
       |> Enum.at(0) 
@@ -116,7 +140,7 @@ defmodule Project1 do
 
   defp parse_args(args) do
     {_, word, _} = args 
-    |> OptionParser.parse(strict: [limit: :integer])
+    |> OptionParser.parse(strict: [:integer])
     word
   end
 end
