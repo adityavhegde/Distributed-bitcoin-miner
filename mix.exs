@@ -5,7 +5,7 @@ defmodule Project1.Mixfile do
     [
       app: :project1,
       version: "0.1.0",
-      elixir: "~> 1.5",
+      #elixir: "~> 1.5",
       escript: [main_module: Project1],
       #build_embedded: Mix.env == :dev,
       #start_permanent: Mix.env == :dev,
