@@ -84,13 +84,23 @@ end
 
 defmodule Project1 do
   def main(args) do
-  #get the ip of current node, and start it
+    #check for current OS family
+    os = :os.type |> elem(0) |> Atom.to_string
+    #get the ip of current node, and start it
     {:ok, list_ips} = :inet.getif()
-    current_ip = list_ips 
-                    |> Enum.at(0) 
-                    |> elem(0) 
-                    |> :inet_parse.ntoa 
-                    |> IO.iodata_to_binary 
+    current_ip = if os  =~ "win" do
+        list_ips 
+        |> Enum.at(1) 
+        |> elem(0) 
+        |> Tuple.to_list
+        |> Enum.join(".")
+    else
+        list_ips 
+        |> Enum.at(0) 
+        |> elem(0) 
+        |> :inet_parse.ntoa 
+        |> IO.iodata_to_binary
+    end
     nodeFullName = "mining@"<>current_ip
     Node.start String.to_atom(nodeFullName)
     Node.set_cookie :xyzzy
