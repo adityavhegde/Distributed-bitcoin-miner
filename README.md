@@ -8,7 +8,9 @@
 
 # Project Design
 
-The code is organised to detect if the running Node is a Client or a Server on the basis of the arguments passed. It is assumed that the first ip detected by :inet.getif() on a linux-based OS is the host IP. Similar measures have been taken for windows-based operating system.
+The code is organised to detect if the running Node is a Client or a Server on the basis of the arguments passed.
+
+**Assumptions:** It is assumed that the first ip detected by :inet.getif() on a linux-based OS is the host IP. Similar measures have been taken for windows-based operating system.
 
 **When the code is run as the Server:**
 - The boss(or the main) process running at the Server Node spawns _N_ processes/workers(here 16) on its own node.
